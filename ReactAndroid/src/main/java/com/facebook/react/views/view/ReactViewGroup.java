@@ -434,7 +434,6 @@ public class ReactViewGroup extends ViewGroup implements
     // if overflow is set to ViewProps.HIDDEN. This effectively solves Issue #23870 which
     // appears to have been introduced by FLAG_CLIP_CHILDREN being forced false
     // regardless of whether clipping is desired.
-
     final RectF rect = new RectF();
     rect.set(r);
 
@@ -460,9 +459,7 @@ public class ReactViewGroup extends ViewGroup implements
     boolean rectIsVisible = true;
 
     ViewParent parent = getParent();
-    String overflow = getOverflow();
-    if (parent == null ||
-      (overflow != null && overflow.equals(ViewProps.HIDDEN))) {
+    if (parent == null || ViewProps.HIDDEN.equals(mOverflow)) {
       rectIsVisible = rect.intersect(0, 0, width, height);
     }
 
@@ -473,6 +470,14 @@ public class ReactViewGroup extends ViewGroup implements
       rectIsVisible = parent.getChildVisibleRect(this, r, offset);
     }
     return rectIsVisible;
+  }
+
+  // Override the @hide decorated API as well, because ViewGroups will call it.
+  public boolean getChildVisibleRect(
+    View child, Rect r, android.graphics.Point offset, boolean forceParentCheck) {
+    // It's safe to discard 'forceParentCheck' as it is only used internal to the Android SDK
+    // for testing ViewGroup.
+    return getChildVisibleRect(child, r, offset);
   }
 
   @Override
