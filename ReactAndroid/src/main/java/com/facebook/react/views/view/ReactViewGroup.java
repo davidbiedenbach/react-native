@@ -18,9 +18,11 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.ViewStructure;
 import android.view.animation.Animation;
 import com.facebook.common.logging.FLog;
@@ -425,6 +427,97 @@ public class ReactViewGroup extends ViewGroup implements
         }
       }
     }
+  }
+
+  @Override
+  public boolean getChildVisibleRect(View child, Rect r, android.graphics.Point offset) {
+    final RectF rect = new RectF();
+    rect.set(r);
+    child.getMatrix().mapRect(rect);
+    final int dx = child.getLeft() - getScrollX();
+    final int dy = child.getTop() - getScrollY();
+    rect.offset(dx, dy);
+    if (offset != null) {
+      float[] position = new float[2];
+      position[0] = offset.x;
+      position[1] = offset.y;
+      child.getMatrix().mapPoints(position);
+      offset.x = (int) (position[0] + 0.5f) + dx;
+      offset.y = (int) (position[1] + 0.5f) + dy;
+    }
+
+    boolean rectIsVisible = true;
+
+    String overflow = getOverflow();
+    ViewParent parent = getParent();
+    Rect s = new Rect(0, 0, getRight() - getLeft(), getBottom() - getTop());
+    if (getRemoveClippedSubviews()) {
+      Log.e("Rects", s.toString() + " rnclip: " + mClippingRect.toString());
+      rectIsVisible = rect.intersect(mClippingRect.left, mClippingRect.top, mClippingRect.right, mClippingRect.bottom);
+    }
+
+    r.set((int) Math.floor(rect.left), (int) Math.floor(rect.top),
+      (int) Math.ceil(rect.right), (int) Math.ceil(rect.bottom));
+    if (rectIsVisible && parent != null) {
+        rectIsVisible = parent.getChildVisibleRect(this, r, offset);
+    }
+
+    return rectIsVisible;
+
+//     It doesn't make a whole lot of sense to call this on a view that isn't attached,
+//     but for some simple tests it can be useful. If we don't have attach info this
+//     will allocate memory.
+//    final RectF rect = mAttachInfo != null ? mAttachInfo.mTmpTransformRect : new RectF();
+//    rect.set(r);
+//    if (!child.hasIdentityMatrix()) {
+//      child.getMatrix().mapRect(rect);
+//    }
+//    final int dx = child.mLeft - mScrollX;
+//    final int dy = child.mTop - mScrollY;
+//    rect.offset(dx, dy);
+//    if (offset != null) {
+//      if (!child.hasIdentityMatrix()) {
+//        float[] position = mAttachInfo != null ? mAttachInfo.mTmpTransformLocation
+//          : new float[2];
+//        position[0] = offset.x;
+//        position[1] = offset.y;
+//        child.getMatrix().mapPoints(position);
+//        offset.x = Math.round(position[0]);
+//        offset.y = Math.round(position[1]);
+//      }
+//      offset.x += dx;
+//      offset.y += dy;
+//    }
+//    final int width = mRight - mLeft;
+//    final int height = mBottom - mTop;
+//    boolean rectIsVisible = true;
+//    if (mParent == null ||
+//      (mParent instanceof ViewGroup && ((ViewGroup) mParent).getClipChildren())) {
+//      // Clip to bounds.
+//      rectIsVisible = rect.intersect(0, 0, width, height);
+//    }
+//    if ((forceParentCheck || rectIsVisible)
+//      && (mGroupFlags & CLIP_TO_PADDING_MASK) == CLIP_TO_PADDING_MASK) {
+//      // Clip to padding.
+//      rectIsVisible = rect.intersect(mPaddingLeft, mPaddingTop,
+//        width - mPaddingRight, height - mPaddingBottom);
+//    }
+//    if ((forceParentCheck || rectIsVisible) && mClipBounds != null) {
+//      // Clip to clipBounds.
+//      rectIsVisible = rect.intersect(mClipBounds.left, mClipBounds.top, mClipBounds.right,
+//        mClipBounds.bottom);
+//    }
+//    r.set((int) Math.floor(rect.left), (int) Math.floor(rect.top),
+//      (int) Math.ceil(rect.right), (int) Math.ceil(rect.bottom));
+//    if ((forceParentCheck || rectIsVisible) && mParent != null) {
+//      if (mParent instanceof ViewGroup) {
+//        rectIsVisible = ((ViewGroup) mParent)
+//          .getChildVisibleRect(this, r, offset, forceParentCheck);
+//      } else {
+//        rectIsVisible = mParent.getChildVisibleRect(this, r, offset);
+//      }
+//    }
+//    return rectIsVisible;
   }
 
   @Override
